@@ -3,6 +3,7 @@ package org.wysaid.filtervideocamera;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -26,6 +27,7 @@ public class CameraDemoActivity extends Activity {
     public final static String LOG_TAG = CameraGLSurfaceView.LOG_TAG;
 
     public static CameraDemoActivity mCurrentInstance = null;
+
     public static CameraDemoActivity getInstance() {
         return mCurrentInstance;
     }
@@ -53,16 +55,17 @@ public class CameraDemoActivity extends Activity {
         }
     }
 
+    public static final String FILE_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/rec.mp4";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera_demo);
 
-        mTakePicBtn = (Button)findViewById(R.id.takeShotBtn);
-        mRecordBtn = (Button)findViewById(R.id.recordBtn);
-        mCameraSurfaceView = (CameraGLSurfaceView)findViewById(R.id.myGLSurfaceView);
-        mSeekBar = (SeekBar)findViewById(R.id.seekBar);
+        mTakePicBtn = (Button) findViewById(R.id.takeShotBtn);
+        mRecordBtn = (Button) findViewById(R.id.recordBtn);
+        mCameraSurfaceView = (CameraGLSurfaceView) findViewById(R.id.myGLSurfaceView);
+        mSeekBar = (SeekBar) findViewById(R.id.seekBar);
 
         mTakePicBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -90,15 +93,15 @@ public class CameraDemoActivity extends Activity {
                 } else {
                     Log.i(LOG_TAG, "Start recording...");
                     mCameraSurfaceView.setClearColor(1.0f, 0.0f, 0.0f, 0.6f);
-                    mCameraSurfaceView.startRecording(null);
-                    Toast.makeText(CameraDemoActivity.this, "Start Recording...", Toast.LENGTH_LONG).show();
+                    mCameraSurfaceView.startRecording(FILE_PATH);
+                    Toast.makeText(CameraDemoActivity.this, "Start Recording..." + FILE_PATH, Toast.LENGTH_LONG).show();
                 }
             }
         });
 
-          LinearLayout layout = (LinearLayout) findViewById(R.id.menuLinearLayout);
+        LinearLayout layout = (LinearLayout) findViewById(R.id.menuLinearLayout);
 
-        for(int i = 0; i != FilterTypes.length; ++i) {
+        for (int i = 0; i != FilterTypes.length; ++i) {
             MyButtons button = new MyButtons(this);
             button.filterType = FilterTypes[i];
             button.setText(FilterNames[i]);
@@ -107,23 +110,23 @@ public class CameraDemoActivity extends Activity {
         }
 
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    mCameraSurfaceView.setIntensity(progress);
-                }
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                mCameraSurfaceView.setIntensity(progress);
+            }
 
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
 
-                }
+            }
 
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
 
-                }
-            });
+            }
+        });
 
-        Button switchButton = (Button)findViewById(R.id.switchBtn);
+        Button switchButton = (Button) findViewById(R.id.switchBtn);
         switchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -137,22 +140,10 @@ public class CameraDemoActivity extends Activity {
     private View.OnClickListener mFilterSwitchListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            MyButtons btn = (MyButtons)v;
+            MyButtons btn = (MyButtons) v;
             mCameraSurfaceView.setFrameRenderer(btn.filterType);
         }
     };
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        System.exit(0);
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        System.exit(0);
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
