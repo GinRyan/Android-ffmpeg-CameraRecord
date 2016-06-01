@@ -25,6 +25,7 @@ import org.wysaid.myUtils.Common;
 import org.wysaid.myUtils.ImageUtil;
 import org.wysaid.recorder.MyRecorderWrapper;
 
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -123,7 +124,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
                 {
                     synchronized (this) {
                         try {
-                            this.wait(50);
+                            this.wait(16);
                         } catch (InterruptedException e) {
                             Log.e(LOG_TAG, "Recording runnable wait() : " + e.getMessage());
                         }
@@ -463,7 +464,9 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
             if (mShouldRecord && mVideoRecorder != null && mVideoRecorder.isRecording()) {
                 opencv_core.IplImage imgCache = getImageCache();
                 if (imgCache != null) {
-                    GLES20.glReadPixels(drawViewport.x, drawViewport.y, 640, 480, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, imgCache.getByteBuffer());
+                    //视频帧坐标变换问题
+                    ByteBuffer buffer = imgCache.getByteBuffer();
+                    GLES20.glReadPixels(drawViewport.x, drawViewport.y, 640, 480, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, buffer);
                     pushCachedFrame(imgCache);
 
                     if(mRecordingRunnable != null) {
