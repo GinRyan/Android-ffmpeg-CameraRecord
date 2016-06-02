@@ -19,13 +19,16 @@ import android.view.SurfaceHolder;
 import com.googlecode.javacv.cpp.opencv_core;
 
 import org.wysaid.camera.CameraInstance;
-import org.wysaid.texUtils.*;
-
 import org.wysaid.myUtils.Common;
 import org.wysaid.myUtils.ImageUtil;
 import org.wysaid.recorder.MyRecorderWrapper;
+import org.wysaid.texUtils.TextureRenderer;
+import org.wysaid.texUtils.TextureRendererBlur;
+import org.wysaid.texUtils.TextureRendererEdge;
+import org.wysaid.texUtils.TextureRendererEmboss;
+import org.wysaid.texUtils.TextureRendererLerpBlur;
+import org.wysaid.texUtils.TextureRendererWave;
 
-import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -86,8 +89,13 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
     }
 
     private void pushCachedFrame(opencv_core.IplImage img) {
+        //解决了视频帧横纵变换问题
+        opencv_core.CvMat originCvMat = img.asCvMat();
+        opencv_core.IplImage imageFlipped = opencv_core.IplImage.createCompatible(img);
+        opencv_core.CvMat flippedXYMat = imageFlipped.asCvMat();
+        opencv_core.cvFlip(originCvMat, flippedXYMat, 0);
         synchronized (mFrameQueue) {
-            mFrameQueue.offer(makeFrame(img));
+            mFrameQueue.offer(makeFrame(flippedXYMat.asIplImage()));
         }
     }
 
@@ -116,12 +124,10 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
 
         @Override
         public void run() {
-            while(mShouldRecord)
-            {
+            while (mShouldRecord) {
                 CachedFrame frame = getCachedFrame();
 
-                if(frame == null)
-                {
+                if (frame == null) {
                     synchronized (this) {
                         try {
                             this.wait(16);
@@ -129,14 +135,14 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
                             Log.e(LOG_TAG, "Recording runnable wait() : " + e.getMessage());
                         }
 
-                        if(!mShouldRecord) {
+                        if (!mShouldRecord) {
                             return;
                         }
                     }
                     continue;
                 }
 
-                if(mVideoRecorder != null && mVideoRecorder.isRecording()) {
+                if (mVideoRecorder != null && mVideoRecorder.isRecording()) {
                     mVideoRecorder.writeFrame(frame.image);
                 }
                 recycleCachedFrame(frame);
@@ -177,11 +183,11 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
     }
 
     public synchronized void switchCamera() {
-        if(mMyRenderer != null) {
+        if (mMyRenderer != null) {
             queueEvent(new Runnable() {
                 @Override
                 public void run() {
-                    if(mMyRenderer == null) {
+                    if (mMyRenderer == null) {
                         Log.e(LOG_TAG, "Error: switchCamera after release!!");
                         return;
                     }
@@ -211,11 +217,11 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
     }
 
     public synchronized void setIntensity(final int value) {
-        if(mMyRenderer == null)
-            return ;
+        if (mMyRenderer == null)
+            return;
 
-        if(mMyRenderer instanceof TextureRendererBlur) {
-            final TextureRendererBlur r = (TextureRendererBlur)mMyRenderer;
+        if (mMyRenderer instanceof TextureRendererBlur) {
+            final TextureRendererBlur r = (TextureRendererBlur) mMyRenderer;
 
             queueEvent(new Runnable() {
                 @Override
@@ -223,13 +229,12 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
                     r.setSamplerRadius(value);
                 }
             });
-        }
-        else if(mMyRenderer instanceof TextureRendererLerpBlur) {
-            final TextureRendererLerpBlur r = (TextureRendererLerpBlur)mMyRenderer;
+        } else if (mMyRenderer instanceof TextureRendererLerpBlur) {
+            final TextureRendererLerpBlur r = (TextureRendererLerpBlur) mMyRenderer;
             queueEvent(new Runnable() {
                 @Override
                 public void run() {
-                    r.setIntensity((int)(value / 100.0f * 16.0f));
+                    r.setIntensity((int) (value / 100.0f * 16.0f));
                 }
             });
         }
@@ -250,8 +255,8 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
                         break;
                     case Filter_Blur:
                         renderer = TextureRendererBlur.create(isExternalOES);
-                        if(renderer != null) {
-                            ((TextureRendererBlur) renderer).setSamplerRadius(50.0f);
+                        if (renderer != null) {
+                            ((TextureRendererBlur) renderer).setSamplerRadius(10.0f);
                         }
                         break;
                     case Filter_Edge:
@@ -262,8 +267,8 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
                         break;
                     case Filter_BlurLerp:
                         renderer = TextureRendererLerpBlur.create(isExternalOES);
-                        if(renderer != null) {
-                            ((TextureRendererLerpBlur) renderer).setIntensity(16);
+                        if (renderer != null) {
+                            ((TextureRendererLerpBlur) renderer).setIntensity(0);
                         }
                         break;
                     default:
@@ -292,12 +297,12 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
 
     public synchronized void startRecording(String filePath) {
 
-        if(mShouldRecord) {
+        if (mShouldRecord) {
             endRecording();
         }
         mImageList = new LinkedList<>();
         mFrameQueue = new LinkedList<>();
-        if(filePath == null || filePath.isEmpty())
+        if (filePath == null || filePath.isEmpty())
             mVideoRecorder = new MyRecorderWrapper(mContext);
         else
             mVideoRecorder = new MyRecorderWrapper(filePath);
@@ -307,7 +312,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
         mRecordingThread = new Thread(mRecordingRunnable);
         mRecordingThread.start();
 
-        for(opencv_core.IplImage img :  mIplImageCaches) {
+        for (opencv_core.IplImage img : mIplImageCaches) {
             mImageList.add(img);
         }
 
@@ -365,8 +370,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
 
         mIplImageCaches = new opencv_core.IplImage[MAX_CACHED_FRAMES];
 
-        for(int i = 0; i != MAX_CACHED_FRAMES; ++i)
-        {
+        for (int i = 0; i != MAX_CACHED_FRAMES; ++i) {
             mIplImageCaches[i] = opencv_core.IplImage.create(640, 480, opencv_core.IPL_DEPTH_8U, 4);
         }
         mContext = context;
@@ -384,7 +388,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
         mSurfaceTexture.setOnFrameAvailableListener(this);
 
         TextureRendererWave rendererWave = new TextureRendererWave();
-        if(!rendererWave.init(true)) {
+        if (!rendererWave.init(true)) {
             Log.e(LOG_TAG, "init filter failed!\n");
         }
 
@@ -405,14 +409,14 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
     }
 
     private void calcViewport() {
-        float camHeight = (float)cameraInstance().previewWidth();
-        float camWidth = (float)cameraInstance().previewHeight();
+        float camHeight = (float) cameraInstance().previewWidth();
+        float camWidth = (float) cameraInstance().previewHeight();
 
         drawViewport = new TextureRenderer.Viewport();
 
         float scale = Math.min(viewWidth / camWidth, viewHeight / camHeight);
-        drawViewport.width = (int)(camWidth * scale);
-        drawViewport.height = (int)(camHeight * scale);
+        drawViewport.width = (int) (camWidth * scale);
+        drawViewport.height = (int) (camHeight * scale);
         drawViewport.x = (viewWidth - drawViewport.width) / 2;
         drawViewport.y = (viewHeight - drawViewport.height) / 2;
     }
@@ -426,12 +430,15 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
         viewWidth = width;
         viewHeight = height;
 
-        if(!cameraInstance().isPreviewing()) {
+        if (!cameraInstance().isPreviewing()) {
             cameraInstance().startPreview(mSurfaceTexture);
         }
 
         calcViewport();
     }
+
+    int rows = 480;
+    int cols = 640;
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
@@ -446,7 +453,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void onDrawFrame(GL10 gl) {
 
-        if(mMyRenderer == null || mSurfaceTexture == null) {
+        if (mMyRenderer == null || mSurfaceTexture == null) {
             Log.e(LOG_TAG, "Invalid Texture Renderer!");
             return;
         }
@@ -464,12 +471,10 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
             if (mShouldRecord && mVideoRecorder != null && mVideoRecorder.isRecording()) {
                 opencv_core.IplImage imgCache = getImageCache();
                 if (imgCache != null) {
-                    //视频帧坐标变换问题
-                    ByteBuffer buffer = imgCache.getByteBuffer();
-                    GLES20.glReadPixels(drawViewport.x, drawViewport.y, 640, 480, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, buffer);
+                    GLES20.glReadPixels(drawViewport.x, drawViewport.y, cols, rows, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, imgCache.getByteBuffer());
                     pushCachedFrame(imgCache);
 
-                    if(mRecordingRunnable != null) {
+                    if (mRecordingRunnable != null) {
                         synchronized (mRecordingRunnable) {
                             try {
                                 mRecordingRunnable.notifyAll();
@@ -492,8 +497,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
     public synchronized void takeShot() {
 //        cameraInstance().stopPreview();
 
-        if(mBuffer == null || mBuffer.limit() != drawViewport.width * drawViewport.height)
-        {
+        if (mBuffer == null || mBuffer.limit() != drawViewport.width * drawViewport.height) {
             mBuffer = IntBuffer.allocate(drawViewport.width * drawViewport.height);
         }
 
@@ -528,7 +532,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture) {
 //        Log.i(LOG_TAG, "onFrameAvailable...");
-        if(mLastTimestamp == 0)
+        if (mLastTimestamp == 0)
             mLastTimestamp = mSurfaceTexture.getTimestamp();
 
         long currentTimestamp = mSurfaceTexture.getTimestamp();
@@ -536,8 +540,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
         ++mFramesCount;
         mTimeCount += currentTimestamp - mLastTimestamp;
         mLastTimestamp = currentTimestamp;
-        if(mTimeCount >= 1e9)
-        {
+        if (mTimeCount >= 1e9) {
             Log.i(LOG_TAG, String.format("TimeCount: %d, Fps: %d", mTimeCount, mFramesCount));
             mTimeCount -= 1e9;
             mFramesCount = 0;
@@ -552,7 +555,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
         GLES20.glGenTextures(1, texID, 0);
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, texID[0]);
         GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
-                GL10.GL_TEXTURE_MIN_FILTER,GL10.GL_LINEAR);
+                GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR);
         GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
                 GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR);
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
