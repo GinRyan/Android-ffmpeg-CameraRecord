@@ -357,6 +357,9 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
 
     public CameraGLSurfaceView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        if (isInEditMode()) {
+            return;
+        }
         Log.i(LOG_TAG, "MyGLSurfaceView Construct...");
 
         setEGLContextClientVersion(2);
@@ -387,14 +390,14 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
         mSurfaceTexture = new SurfaceTexture(mTextureID);
         mSurfaceTexture.setOnFrameAvailableListener(this);
 
-        TextureRendererWave rendererWave = new TextureRendererWave();
-        if (!rendererWave.init(true)) {
+        TextureRendererLerpBlur rendererLerpBlur = new TextureRendererLerpBlur();
+        if (!rendererLerpBlur.init(true)) {
             Log.e(LOG_TAG, "init filter failed!\n");
         }
 
-        rendererWave.setAutoMotion(0.4f);
+        rendererLerpBlur.setIntensity(0);
 
-        mMyRenderer = rendererWave;
+        mMyRenderer = rendererLerpBlur;
         mMyRenderer.setRotation(-(float) (Math.PI / 2.0));
         mMyRenderer.setFlipscale(1.0f, 1.0f);
 

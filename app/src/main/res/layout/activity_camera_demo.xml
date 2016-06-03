@@ -1,15 +1,25 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
-    android:layout_height="match_parent" android:paddingLeft="@dimen/activity_horizontal_margin"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    android:paddingBottom="@dimen/activity_vertical_margin" tools:context=".MainActivity">
+    tools:context=".MainActivity">
+
+    <SeekBar
+        android:id="@+id/seekBar"
+        android:layout_width="match_parent"
+        android:layout_height="60dp" />
 
     <FrameLayout
         android:id="@+id/glviewFrameLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        >
+        android:layout_above="@+id/scrollView"
+        android:layout_below="@id/seekBar"
+        android:layout_centerInParent="true">
 
         <org.wysaid.view.CameraGLSurfaceView
             android:id="@+id/myGLSurfaceView"
@@ -17,38 +27,34 @@
             android:layout_height="match_parent" />
     </FrameLayout>
 
-    <SeekBar
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:id="@+id/seekBar"/>
-
     <HorizontalScrollView
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true">
+
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_alignParentBottom="true"
-            android:id="@+id/menuLinearLayout">
+            android:id="@+id/menuLinearLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp">
 
             <Button
-                android:layout_width="100dp"
-                android:layout_height="match_parent"
                 android:id="@+id/takeShotBtn"
-                android:text="拍照"/>
-
-            <Button
                 android:layout_width="100dp"
                 android:layout_height="match_parent"
+                android:text="拍照" />
+
+            <Button
                 android:id="@+id/recordBtn"
-                android:text="点按录像"/>
-
-            <Button
                 android:layout_width="100dp"
                 android:layout_height="match_parent"
+                android:text="点按录像" />
+
+            <Button
                 android:id="@+id/switchBtn"
-                android:text="切换前后"/>
+                android:layout_width="100dp"
+                android:layout_height="match_parent"
+                android:text="切换前后" />
 
         </LinearLayout>
     </HorizontalScrollView>
