@@ -89,13 +89,15 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
     }
 
     private void pushCachedFrame(opencv_core.IplImage img) {
-        //解决了视频帧横纵变换问题
-        opencv_core.CvMat originCvMat = img.asCvMat();
-        opencv_core.IplImage imageFlipped = opencv_core.IplImage.createCompatible(img);
-        opencv_core.CvMat flippedXYMat = imageFlipped.asCvMat();
-        opencv_core.cvFlip(originCvMat, flippedXYMat, 0);
         synchronized (mFrameQueue) {
-            mFrameQueue.offer(makeFrame(flippedXYMat.asIplImage()));
+            //解决了视频帧横纵变换问题
+            opencv_core.IplImage copied = opencv_core.IplImage.createCompatible(img);
+            opencv_core.cvFlip(img, copied, 0);
+
+            mFrameQueue.offer(makeFrame(copied));
+            //必须将无用的数据释放
+            img.release();
+            img = null;
         }
     }
 
@@ -125,6 +127,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
         @Override
         public void run() {
             while (mShouldRecord) {
+                long start = System.currentTimeMillis();
                 CachedFrame frame = getCachedFrame();
 
                 if (frame == null) {
@@ -146,6 +149,9 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
                     mVideoRecorder.writeFrame(frame.image);
                 }
                 recycleCachedFrame(frame);
+
+                long end = System.currentTimeMillis();
+                Log.d("addFrame", " Write Frame: " + (end - start) + " ms");
             }
         }
     }
