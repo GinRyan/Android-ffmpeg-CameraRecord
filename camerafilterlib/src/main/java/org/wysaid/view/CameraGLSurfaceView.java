@@ -115,7 +115,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
     }
 
     //获取空闲的缓存帧
-    private opencv_core.IplImage getImageCache() {
+    private opencv_core.IplImage getIdleCachedImage() {
         synchronized (mImageList) {
             return mImageList.poll();
         }
@@ -417,22 +417,35 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
         });
     }
 
+    /**
+     * 计算视口操作
+     */
     private void calcViewport() {
         float camHeight = (float) cameraInstance().previewWidth();
         float camWidth = (float) cameraInstance().previewHeight();
 
         drawViewport = new TextureRenderer.Viewport();
 
-        float scale = Math.min(viewWidth / camWidth, viewHeight / camHeight);
+        float scale;
+        //如果是横向宽幅视频预览区
+        if (viewWidth > viewHeight) {
+            scale = Math.max(viewWidth / camWidth, viewHeight / camHeight);
+            drawViewport.height = (int) (camHeight * scale)/2;//预览高度取一半
+        } else {
+            scale = Math.min(viewWidth / camWidth, viewHeight / camHeight);
+            drawViewport.height = (int) (camHeight * scale);//预览高度不变(待定)
+        }
         drawViewport.width = (int) (camWidth * scale);
-        drawViewport.height = (int) (camHeight * scale);
         drawViewport.x = (viewWidth - drawViewport.width) / 2;
         drawViewport.y = (viewHeight - drawViewport.height) / 2;
+
+        Log.d(LOG_TAG, "calc Cam View: Height: " + camHeight + "  Width:" + camWidth + "  ScaleFactor: " + scale);
+        Log.d(LOG_TAG, "calc ViewPort: " + drawViewport);
     }
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
-        Log.i(LOG_TAG, String.format("onSurfaceChanged: %d x %d", width, height));
+        Log.i(LOG_TAG, String.format("calc GLSurfaceViewPort(onChanged): %d x %d", width, height));
 
         GLES20.glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 
@@ -466,7 +479,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
             Log.e(LOG_TAG, "Invalid Texture Renderer!");
             return;
         }
-
+        //gl.glViewport(drawViewport.x, drawViewport.y, drawViewport.width, drawViewport.height);
         mSurfaceTexture.updateTexImage();
         mSurfaceTexture.getTransformMatrix(mTransformMatrix);
         mMyRenderer.setTransform(mTransformMatrix);
@@ -478,7 +491,7 @@ public class CameraGLSurfaceView extends GLSurfaceView implements GLSurfaceView.
         synchronized (mRecordStateLock) {
 
             if (mShouldRecord && mVideoRecorder != null && mVideoRecorder.isRecording()) {
-                opencv_core.IplImage imgCache = getImageCache();
+                opencv_core.IplImage imgCache = getIdleCachedImage();
                 if (imgCache != null) {
                     GLES20.glReadPixels(drawViewport.x, drawViewport.y, cols, rows, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, imgCache.getByteBuffer());
                     pushCachedFrame(imgCache);
